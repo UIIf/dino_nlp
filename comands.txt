@@ -1,0 +1,1 @@
+python main_dino.py --data_path="C:\gr\dino\datasets\OJ_pycparser_train_test_val\train"
