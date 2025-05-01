@@ -38,14 +38,14 @@ def get_args_parser():
     parser = argparse.ArgumentParser('DINO', add_help=False)
 
     # Model parameters
-    parser.add_argument('--arch', default='t_small', type=str,
-        choices=['t_tiny', 't_small', 't_base'],
+    parser.add_argument('--arch', default='t_nano', type=str,
+        choices=['t_nano', 't_tiny', 't_small', 't_base'],
         help="""Name of architecture to train. For quick experiments with Ts,    
         we recommend using vit_tiny or vit_small.""")
     parser.add_argument(
         "--token_slicer", default="Tokens", type=str, choices=["Tokens", "Lines"]
     )
-    parser.add_argument('--max_token_count', default=800, type=int, help="""Max count of tokens in crop""")
+    parser.add_argument('--max_token_count', default=65536, type=int, help="""Max count of tokens in crop""")
 
     parser.add_argument('--out_dim', default=65536, type=int, help="""Dimensionality of
         the DINO head output. For complex and large datasets large values (like 65k) work well.""")
@@ -82,7 +82,7 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    parser.add_argument('--batch_size_per_gpu', default=64, type=int,
+    parser.add_argument('--batch_size_per_gpu', default=32, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
@@ -160,10 +160,10 @@ def train_dino(args):
     # if the network is a Vision Transformer (i.e. vit_tiny, vit_small, vit_base)
     if args.arch in vits.__dict__.keys():
         student = vits.__dict__[args.arch](
-            patch_size=args.patch_size,
-            drop_path_rate=args.drop_path_rate,  # stochastic depth
+            vocab_size=tokenizer.vocab_size,
+            max_tokens=args.max_token_count
         )
-        teacher = vits.__dict__[args.arch](patch_size=args.patch_size)
+        teacher = vits.__dict__[args.arch](vocab_size=tokenizer.vocab_size, max_tokens=args.max_token_count)
         embed_dim = student.embed_dim
     else:
         print(f"Unknow architecture: {args.arch}")
@@ -292,7 +292,7 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
                     fp16_scaler, args):
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Epoch: [{}/{}]'.format(epoch, args.epochs)
-    for it, (images, _) in enumerate(metric_logger.log_every(data_loader, 10, header)):
+    for it, images in enumerate(metric_logger.log_every(data_loader, 10, header)):
         # update weight decay and learning rate according to their schedule
         it = len(data_loader) * epoch + it  # global training iteration
         for i, param_group in enumerate(optimizer.param_groups):

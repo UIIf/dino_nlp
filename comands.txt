@@ -1,1 +1,1 @@
-python main_dino.py --data_path="C:\gr\dino\datasets\OJ_pycparser_train_test_val\train"
+python main_dino.py --data_path "/home/uiif/gr/data/OJ104_pycparser_train_test_val/OJ_pycparser_train_test_val/train" --max_token_count 1000 --batch_size_per_gpu 8

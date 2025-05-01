@@ -164,10 +164,6 @@ class Transformer(nn.Module):
         )
         self.norm = norm_layer(embed_dim)
 
-        # Classifier head
-        self.head = (
-            nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()
-        )
 
         trunc_normal_(self.pos_embed, std=0.02)
         trunc_normal_(self.cls_token, std=0.02)
@@ -183,10 +179,8 @@ class Transformer(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def interpolate_pos_encoding(self, x, tk):
-        npatch = x.shape[1] - 1
-        N = self.pos_embed.shape[1] - 1
-        if npatch == N:
-            return self.pos_embed
+
+        return self.pos_embed[:, :tk + 1]
 
     def prepare_tokens(self, x):
         B, tk = x.shape
@@ -226,6 +220,20 @@ class Transformer(nn.Module):
             if len(self.blocks) - i <= n:
                 output.append(self.norm(x))
         return output
+
+def t_nano(vocab_size, max_tokens, **kwargs):
+    model = Transformer(
+        num_embedings=vocab_size,\
+        max_tokens=max_tokens,
+        embed_dim=192,
+        depth=5,
+        num_heads=3,
+        mlp_ratio=4,
+        qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        **kwargs,
+    )
+    return model
 
 def t_tiny(vocab_size, max_tokens, **kwargs):
     model = Transformer(
